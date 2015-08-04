@@ -124,8 +124,8 @@ static inline CGFloat myRand(CGFloat low, CGFloat high) {
     CGPathRelease(boundingPath);
     
     ship.physicsBody.categoryBitMask = shipCategory;
-    ship.physicsBody.collisionBitMask = shipCategory | asteroidCategory | planetCategory | edgeCategory;
-    ship.physicsBody.contactTestBitMask = shipCategory | asteroidCategory | planetCategory | edgeCategory;
+    ship.physicsBody.collisionBitMask = shipCategory | enemy | friendly | edgeCategory;
+    ship.physicsBody.contactTestBitMask = shipCategory | enemy | friendly | edgeCategory;
     
     // The ship doesn't slow down when it moves forward, but it does slow its angular rotation. In practice,
     // this feels better for a game.
@@ -133,6 +133,7 @@ static inline CGFloat myRand(CGFloat low, CGFloat high) {
     ship.physicsBody.angularDamping = 0.5;
     
 
+    ship.name = @"Main";
     
     return ship;
 }

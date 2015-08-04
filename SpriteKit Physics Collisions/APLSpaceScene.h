@@ -62,8 +62,8 @@ typedef enum {
 // These constans are used to define the physics interactions between physics bodies in the scene.
 static const uint32_t missileCategory  =  0x1 << 0;
 static const uint32_t shipCategory     =  0x1 << 1;
-static const uint32_t asteroidCategory =  0x1 << 2;
-static const uint32_t planetCategory   =  0x1 << 3;
+static const uint32_t enemy =  0x1 << 2;
+static const uint32_t friendly   =  0x1 << 3;
 static const uint32_t edgeCategory     =  0x1 << 4;
 
 @interface APLSpaceScene : SKScene <SKPhysicsContactDelegate>

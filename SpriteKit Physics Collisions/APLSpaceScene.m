@@ -57,6 +57,8 @@
 @interface APLSpaceScene ()
 @property BOOL contentCreated;
 @property BOOL runEngine;
+@property (nonatomic, strong) NSMutableArray* arraywithFrieds;
+@property (nonatomic, strong) SKLabelNode* myLabel;
 @property APLShipSprite *controlledShip;
 @end
 
@@ -127,6 +129,7 @@ static const NSInteger missileDamage = 1;
     SKAction *fullScale = [SKAction repeatActionForever:[SKAction sequence:@[scaleDown]]];
     [self.controlledShip runAction:fullScale];
 
+    self.arraywithFrieds = [NSMutableArray array];
     for (int i = 0; i < 10; i++)
     {
         SKNode *rock = [self newAFriendNode];
@@ -134,12 +137,16 @@ static const NSInteger missileDamage = 1;
         CGFloat x = arc4random()%500;
         CGFloat y = arc4random()%500;
         rock.position = CGPointMake(x, y);
+        rock.name = [NSString stringWithFormat:@"Friend %d", i];
         [self addChild:rock];
+        
+        [self.arraywithFrieds addObject:rock];
     }
     
     for (int i = 0; i < 10; i++)
     {
         SKNode *rock = [self newEmenyNode];
+        rock.name = [NSString stringWithFormat:@"Enemy %d", i];
         
         CGFloat x = arc4random()%500;
         CGFloat y = arc4random()%500;
@@ -147,27 +154,27 @@ static const NSInteger missileDamage = 1;
         [self addChild:rock];
     }
     
+    [self setStart];
+    
+    
+    self.myLabel = [SKLabelNode labelNodeWithFontNamed:@"Arial"];
+    self.myLabel.text = @"";
+    self.myLabel.fontSize = 20;
+    self.myLabel.position = CGPointMake(CGRectGetMidX(self.frame), CGRectGetMidY(self.frame) + 200);
+    
+    [self addChild:self.myLabel];
 
 }
 
-//fire
-- (SKNode*) newMissileNode
+- (void)setStart
 {
-    /*
-     Creates and returns a new missile game object.
-     This method loads a preconfigured emitter from an archive, and then configures it with a physics body.
-     */
-    SKEmitterNode *missile =  [NSKeyedUnarchiver unarchiveObjectWithFile:[[NSBundle mainBundle] pathForResource:@"missile" ofType:@"sks"]];
+    self.controlledShip.physicsBody.categoryBitMask = shipCategory;
+    self.controlledShip.physicsBody.collisionBitMask =   friendly | edgeCategory;
+    self.controlledShip.physicsBody.contactTestBitMask =  friendly | edgeCategory;
     
-    // The missile particles should be spawned in the scene, not on the missile object.
-    missile.targetNode = self;
+    SKNode* node = [self.arraywithFrieds objectAtIndex:5];
     
-    missile.physicsBody = [SKPhysicsBody bodyWithCircleOfRadius:shotSize];
-    missile.physicsBody.categoryBitMask = missileCategory;
-    missile.physicsBody.contactTestBitMask = shipCategory | asteroidCategory | planetCategory | edgeCategory;
-    missile.physicsBody.collisionBitMask = 0;
-    
-    return missile;
+    self.controlledShip.position = node.position;
 }
 
 - (SKNode*) newAFriendNode
@@ -185,9 +192,9 @@ static const NSInteger missileDamage = 1;
     asteroid.fillColor = [SKColor whiteColor];
     
     asteroid.physicsBody = [SKPhysicsBody bodyWithCircleOfRadius:asteroidSize];
-    asteroid.physicsBody.categoryBitMask = asteroidCategory;
-    asteroid.physicsBody.collisionBitMask =  asteroidCategory | edgeCategory;
-    asteroid.physicsBody.contactTestBitMask = planetCategory;
+    asteroid.physicsBody.categoryBitMask = enemy;
+    asteroid.physicsBody.collisionBitMask =  enemy | edgeCategory | friendly;
+  //  asteroid.physicsBody.contactTestBitMask = friendly;
     
     return asteroid;
 }
@@ -207,9 +214,9 @@ static const NSInteger missileDamage = 1;
     asteroid.fillColor = [SKColor redColor];
     
     asteroid.physicsBody = [SKPhysicsBody bodyWithCircleOfRadius:asteroidSize];
-    asteroid.physicsBody.categoryBitMask = asteroidCategory;
-    asteroid.physicsBody.collisionBitMask = shipCategory | asteroidCategory | edgeCategory;
-    asteroid.physicsBody.contactTestBitMask = planetCategory;
+    asteroid.physicsBody.categoryBitMask = friendly;
+    asteroid.physicsBody.collisionBitMask = shipCategory | enemy | edgeCategory | friendly;
+  //  asteroid.physicsBody.contactTestBitMask = friendly;
     
     return asteroid;
 }
@@ -273,15 +280,24 @@ static const NSInteger missileDamage = 1;
     
     if (contact.bodyA.categoryBitMask < contact.bodyB.categoryBitMask)
     {
-        NSLog(@"RED Contact");
+
         firstBody = contact.bodyA;
         secondBody = contact.bodyB;
+        
+        self.myLabel.text = @"STOP";
+        self.runEngine = NO;
+        [self.controlledShip removeAllActions];
+        
+        NSLog(@" A < B First: %@ \nSecond: %@", firstBody.node, secondBody.node);
+        
     }
     else
     {
-        NSLog(@"White contact");
+
         firstBody = contact.bodyB;
         secondBody = contact.bodyA;
+        
+        NSLog(@" A > B First: %@ \nSecond: %@", firstBody.node, secondBody.node);
     }
     
     // Missiles attack whatever they hit, then explode.
@@ -295,7 +311,7 @@ static const NSInteger missileDamage = 1;
     // Ships collide and take damage. The collision damage is based on the strength of the collision.
     if ((firstBody.categoryBitMask & shipCategory) != 0)
     {
-        NSLog(@"4");
+  
         // The edge exists just to keep all gameplay on one screen, so ships should not take damage when they hit the
         // edge.
         
@@ -316,8 +332,8 @@ static const NSInteger missileDamage = 1;
     }
     
     // Asteroids that hit planets are destroyed.
-    if (((firstBody.categoryBitMask & asteroidCategory) != 0) &&
-        ((secondBody.categoryBitMask & planetCategory) != 0))
+    if (((firstBody.categoryBitMask & enemy) != 0) &&
+        ((secondBody.categoryBitMask & friendly) != 0))
     {
         NSLog(@"7");
         [firstBody.node removeFromParent];
@@ -419,7 +435,13 @@ static const NSInteger missileDamage = 1;
             switch (character) {
                 case 'w':
                 {
-                    self.physicsBody remove
+                    self.controlledShip.physicsBody.categoryBitMask = shipCategory;
+                    self.controlledShip.physicsBody.collisionBitMask =   friendly | edgeCategory;
+                    self.controlledShip.physicsBody.contactTestBitMask =  friendly | edgeCategory;
+                    
+                    SKNode* node = [self.arraywithFrieds objectAtIndex:5];
+                    
+                    self.controlledShip.position = node.position;
                 }
                     break;
                 case 'a':
